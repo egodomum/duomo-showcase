@@ -1,0 +1,14 @@
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.local
+secrets/
+tests/
+docs/
+.venv/
+venv/
+*.log
+output/
+.streamlit/
