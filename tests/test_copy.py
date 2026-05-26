@@ -81,3 +81,39 @@ def test_generate_copy_raises_after_second_failure(tmp_path):
             system_prompt_path=prompt_file,
             model="claude-sonnet-4-5",
         )
+
+
+from pipeline.copy import generate_research, generate_design_direction
+
+
+def test_generate_research(tmp_path):
+    fake_json = json.dumps({"persona": {"primary": "consumer"}}, ensure_ascii=False)
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = _mock_response(fake_json)
+
+    prompt_file = tmp_path / "02-research.md"
+    prompt_file.write_text("research system", encoding="utf-8")
+
+    result = generate_research(
+        client=mock_client,
+        brief={"brand": "B&B Italia"},
+        system_prompt_path=prompt_file,
+    )
+    assert result["persona"]["primary"] == "consumer"
+
+
+def test_generate_design_direction(tmp_path):
+    fake_json = json.dumps({"style_preset": "premium-editorial"}, ensure_ascii=False)
+    mock_client = MagicMock()
+    mock_client.messages.create.return_value = _mock_response(fake_json)
+
+    prompt_file = tmp_path / "04-design.md"
+    prompt_file.write_text("design system", encoding="utf-8")
+
+    result = generate_design_direction(
+        client=mock_client,
+        brief={},
+        research={},
+        system_prompt_path=prompt_file,
+    )
+    assert result["style_preset"] == "premium-editorial"
