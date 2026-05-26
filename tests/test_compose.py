@@ -59,3 +59,50 @@ def test_draw_text_writes_pixels():
         if found_black:
             break
     assert found_black, "draw_text가 픽셀을 그리지 않음"
+
+
+from pipeline.compose import render_typo_section
+
+
+SAMPLE_COPY_PAIN = {
+    "intro": "이런 고민, 익숙하지 않으세요?",
+    "pain_points": [
+        "백화점 가구는 어디나 비슷합니다",
+        "병행 수입은 진품 보증이 불안합니다",
+        "원하는 모델을 어디서 사야 할지 모릅니다",
+    ],
+    "emotional_hook": "공간이 평범해지는 이유는, 진짜를 만나지 못해서입니다.",
+}
+
+
+def test_render_typo_section_pain():
+    tokens = load_tokens(TOKENS_PATH)
+    img = render_typo_section(
+        section_key="02_pain",
+        copy_data=SAMPLE_COPY_PAIN,
+        tokens=tokens,
+        fonts_dir=FONTS_DIR,
+    )
+    assert img.size == (1200, 600)
+    # off-white 배경: 모서리 픽셀이 거의 #FAFAF7
+    r, g, b = img.getpixel((0, 0))
+    assert r > 240 and g > 240 and b > 230
+
+
+def test_render_typo_section_dark_mode():
+    """03_problem은 dark 배경."""
+    tokens = load_tokens(TOKENS_PATH)
+    copy_data = {
+        "hook": "당신 안목이 부족한 게 아닙니다",
+        "reasons": ["이유 1", "이유 2", "이유 3"],
+        "reframe": "결국 정식 수입 큐레이션이 답입니다.",
+    }
+    img = render_typo_section(
+        section_key="03_problem",
+        copy_data=copy_data,
+        tokens=tokens,
+        fonts_dir=FONTS_DIR,
+    )
+    r, g, b = img.getpixel((0, 0))
+    # 다크 배경: #1A1A1A
+    assert r < 50 and g < 50 and b < 50
