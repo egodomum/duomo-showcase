@@ -196,3 +196,134 @@ def render_typo_section(
         )
 
     return img
+
+
+def _resize_and_crop(img: Image.Image, target: tuple[int, int]) -> Image.Image:
+    """비율 유지하며 target 크기로 center-crop."""
+    tw, th = target
+    sw, sh = img.size
+    target_ratio = tw / th
+    src_ratio = sw / sh
+
+    if src_ratio > target_ratio:
+        # 원본이 더 넓음 → 높이 기준 리사이즈 후 좌우 자르기
+        new_h = th
+        new_w = int(sw * (th / sh))
+        resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        left = (new_w - tw) // 2
+        return resized.crop((left, 0, left + tw, th))
+    else:
+        new_w = tw
+        new_h = int(sh * (tw / sw))
+        resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        top = (new_h - th) // 2
+        return resized.crop((0, top, tw, top + th))
+
+
+def _apply_editorial_grade(img: Image.Image) -> Image.Image:
+    """채도 -10%, 약간의 워밍 톤."""
+    from PIL import ImageEnhance
+    img = ImageEnhance.Color(img).enhance(0.9)
+    # 워밍 톤: 빨강·노랑 채널 미세 +
+    r, g, b = img.split()
+    r = r.point(lambda v: min(255, int(v * 1.02)))
+    g = g.point(lambda v: min(255, int(v * 1.01)))
+    return Image.merge("RGB", (r, g, b))
+
+
+def _apply_dark_overlay(img: Image.Image, opacity: float = 0.55) -> Image.Image:
+    """검정 오버레이를 합성한다."""
+    overlay = Image.new("RGBA", img.size, (26, 26, 26, int(255 * opacity)))
+    base = img.convert("RGBA")
+    out = Image.alpha_composite(base, overlay)
+    return out.convert("RGB")
+
+
+def render_image_section(
+    *,
+    section_key: str,
+    copy_data: dict[str, Any],
+    ref_image_path: Path,
+    tokens: dict[str, Any],
+    fonts_dir: Path,
+) -> Image.Image:
+    """이미지 기반 섹션 렌더링.
+
+    1. 레퍼런스 이미지 로드 + 리사이즈/크롭
+    2. editorial grade 적용
+    3. background mode에 따라 dark overlay
+    4. 텍스트 오버레이
+    """
+    section_cfg = tokens["sections"][section_key]
+    width = tokens["layout"]["max_width"]
+    height = section_cfg["height"]
+    accent = tokens["color"]["accent"]
+
+    bg = Image.open(ref_image_path).convert("RGB")
+    bg = _resize_and_crop(bg, (width, height))
+    bg = _apply_editorial_grade(bg)
+
+    is_dark = section_cfg.get("background") == "image_overlay_dark"
+    if is_dark:
+        bg = _apply_dark_overlay(bg, opacity=0.55)
+        text_primary = tokens["color"]["text_inverse"]
+        text_secondary = tokens["color"]["muted"]
+    else:
+        text_primary = tokens["color"]["text_primary"]
+        text_secondary = tokens["color"]["text_secondary"]
+
+    pad_x = tokens["layout"]["outer_padding_x"]
+    pad_y = tokens["layout"]["section_inner_padding_y"]
+
+    # 상단 라벨 (urgency_badge 또는 intro)
+    badge = copy_data.get("urgency_badge") or copy_data.get("intro")
+    if badge:
+        draw_hairline(bg, position=(pad_x, pad_y), length=tokens["layout"]["divider_width"],
+                      color=accent)
+        draw_text(
+            bg, text=badge.upper(),
+            position=(pad_x, pad_y + 16),
+            spec=tokens["typography"]["label_uppercase"],
+            color=accent,
+            fonts_dir=fonts_dir,
+        )
+
+    # 중앙 헤드라인 (headline_options[0] 또는 product_name)
+    headline = (
+        (copy_data.get("headline_options") or [None])[0]
+        or copy_data.get("product_name")
+        or copy_data.get("headline")
+        or ""
+    )
+    if headline:
+        draw_text(
+            bg, text=headline,
+            position=(pad_x, height // 2 - 40),
+            spec=tokens["typography"]["headline_kr"],
+            color=text_primary,
+            fonts_dir=fonts_dir,
+        )
+
+    # 서브헤드 (subheadline 또는 one_liner)
+    sub = copy_data.get("subheadline") or copy_data.get("one_liner")
+    if sub:
+        draw_text(
+            bg, text=sub,
+            position=(pad_x, height // 2 + 30),
+            spec=tokens["typography"]["subheadline"],
+            color=text_secondary,
+            fonts_dir=fonts_dir,
+        )
+
+    # 하단 CTA (있을 경우)
+    cta = copy_data.get("cta_text") or copy_data.get("cta_button")
+    if cta:
+        draw_text(
+            bg, text=cta.upper(),
+            position=(pad_x, height - pad_y - 30),
+            spec=tokens["typography"]["cta"],
+            color=text_primary,
+            fonts_dir=fonts_dir,
+        )
+
+    return bg

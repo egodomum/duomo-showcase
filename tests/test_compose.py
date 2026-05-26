@@ -2,7 +2,7 @@
 from pathlib import Path
 
 import pytest
-from PIL import ImageFont
+from PIL import Image, ImageFont
 
 from pipeline.compose import load_tokens, load_font, FontError
 
@@ -10,6 +10,24 @@ from pipeline.compose import load_tokens, load_font, FontError
 PROJECT_ROOT = Path(__file__).parent.parent
 TOKENS_PATH = PROJECT_ROOT / "design_tokens" / "premium-editorial.json"
 FONTS_DIR = PROJECT_ROOT / "fonts"
+SAMPLE_REF = PROJECT_ROOT / "tests" / "_fixtures" / "sample_ref.jpg"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _make_sample_ref():
+    """테스트용 샘플 배경 이미지 생성."""
+    if not SAMPLE_REF.exists():
+        SAMPLE_REF.parent.mkdir(parents=True, exist_ok=True)
+        # 1600x1000 베이지 그라데이션
+        ref = Image.new("RGB", (1600, 1000), "#D9CFC0")
+        for y in range(1000):
+            r = int(217 - (y / 1000) * 40)
+            g = int(207 - (y / 1000) * 35)
+            b = int(192 - (y / 1000) * 30)
+            for x in range(1600):
+                ref.putpixel((x, y), (r, g, b))
+        ref.save(SAMPLE_REF, "JPEG", quality=85)
+    yield
 
 
 def test_load_tokens():
@@ -32,7 +50,6 @@ def test_load_font_raises_on_missing_file():
         load_font(fake_spec, fonts_dir=FONTS_DIR)
 
 
-from PIL import Image
 from pipeline.compose import draw_text
 
 
@@ -106,3 +123,53 @@ def test_render_typo_section_dark_mode():
     r, g, b = img.getpixel((0, 0))
     # 다크 배경: #1A1A1A
     assert r < 50 and g < 50 and b < 50
+
+
+from pipeline.compose import render_image_section
+
+
+SAMPLE_COPY_HERO = {
+    "headline_options": [
+        "30년이 지나도 사랑받는 소파, B&B Italia Charles",
+        "Antonio Citterio가 1997년 그린 미니멀리즘의 정의",
+        "이탈리아 공장에서 1주일에 단 8세트만 만들어지는 모듈러",
+    ],
+    "subheadline": "DUOMO가 정식 수입하는 정통 이탈리아 가구",
+    "urgency_badge": "2026 봄 시즌 한정",
+    "cta_text": "전시장 방문 예약",
+}
+
+
+def test_render_image_section_hero():
+    tokens = load_tokens(TOKENS_PATH)
+    img = render_image_section(
+        section_key="01_hero",
+        copy_data=SAMPLE_COPY_HERO,
+        ref_image_path=SAMPLE_REF,
+        tokens=tokens,
+        fonts_dir=FONTS_DIR,
+    )
+    assert img.size == (1200, 800)
+    # Hero는 dark overlay 적용되므로 평균 어둠
+    pixels = [img.getpixel((x, y)) for x in (100, 600, 1100) for y in (100, 400, 700)]
+    avg_brightness = sum(sum(p) for p in pixels) / (len(pixels) * 3)
+    assert avg_brightness < 150  # overlay 적용 후 어두워야 함
+
+
+def test_render_image_section_solution_no_overlay():
+    """05_solution은 off-white 배경, dark overlay 없음."""
+    tokens = load_tokens(TOKENS_PATH)
+    copy = {
+        "intro": "DUOMO PRESENTS",
+        "product_name": "B&B Italia Charles",
+        "one_liner": "미니멀리즘의 정의",
+        "target_fit": "20평 이상 거실",
+    }
+    img = render_image_section(
+        section_key="05_solution",
+        copy_data=copy,
+        ref_image_path=SAMPLE_REF,
+        tokens=tokens,
+        fonts_dir=FONTS_DIR,
+    )
+    assert img.size == (1200, 400)
