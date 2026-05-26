@@ -15,6 +15,7 @@ CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID")
 CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("GOOGLE_OAUTH_REDIRECT_URI", "http://localhost:8501")
 ALLOWED_DOMAIN = os.getenv("ALLOWED_DOMAIN", "duomo.co.kr")
+DEMO_MODE = os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes")
 
 st.set_page_config(
     page_title="DUOMO Landing Tool",
@@ -24,12 +25,20 @@ st.set_page_config(
 
 
 def _gate_oauth() -> None:
-    """OAuth 가드 — 미인증 사용자는 로그인 화면."""
+    """OAuth 가드 — 미인증 사용자는 로그인 화면.
+
+    DEMO_MODE=1이면 OAuth를 건너뛰고 가짜 사용자로 자동 로그인.
+    """
     if st.session_state.get("user_email"):
         return
 
+    if DEMO_MODE:
+        st.session_state["user_email"] = "demo@duomo.local"
+        st.session_state["credentials"] = None  # Drive 호출은 자동 폴백됨
+        return
+
     if not (CLIENT_ID and CLIENT_SECRET):
-        st.error("OAuth 환경변수가 설정되지 않았습니다. .env를 확인하세요.")
+        st.error("OAuth 환경변수가 설정되지 않았습니다. .env를 확인하거나 DEMO_MODE=1로 검증용 실행하세요.")
         st.stop()
 
     flow = build_flow(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, hd=ALLOWED_DOMAIN)
@@ -73,12 +82,19 @@ def _gate_oauth() -> None:
 
 _gate_oauth()
 
+if DEMO_MODE:
+    st.sidebar.warning("🧪 DEMO MODE")
 st.sidebar.markdown(f"**{st.session_state['user_email']}**")
 if st.sidebar.button("로그아웃"):
     st.session_state.clear()
     st.rerun()
 
 st.title("DUOMO Landing Tool")
+if DEMO_MODE:
+    st.info(
+        "🧪 **DEMO MODE** — OAuth와 Drive가 우회됩니다. "
+        "라이브러리는 비어있으니 신규 프로젝트 → 3단계에서 이미지를 직접 업로드하세요."
+    )
 st.write("좌측 사이드바에서 페이지를 선택하세요.")
 st.markdown("""
 - **신규 프로젝트** — 새 상세페이지 만들기

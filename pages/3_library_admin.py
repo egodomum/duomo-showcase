@@ -18,9 +18,19 @@ if not st.session_state.get("user_email"):
 
 DRIVE_LOOKBOOK_FOLDER_ID = os.getenv("DRIVE_LOOKBOOK_FOLDER_ID")
 DRIVE_LOOKBOOK_INDEX_ID = os.getenv("DRIVE_LOOKBOOK_INDEX_ID")
+DEMO_MODE = os.getenv("DEMO_MODE", "").lower() in ("1", "true", "yes")
 
 st.title("라이브러리 관리")
 st.caption("본사 룩북·DUOMO 자체 촬영 사진을 업로드하고 인덱스에 등록합니다.")
+
+if DEMO_MODE:
+    st.warning(
+        "🧪 **DEMO MODE** — 라이브러리 관리는 비활성화 상태입니다.\n\n"
+        "검증용 모드에서는 Drive 연결 없이 동작합니다. "
+        "신규 프로젝트 → 3단계에서 매번 이미지를 직접 업로드해주세요. "
+        "정식 배포 후에는 본사 룩북을 여기에 등록해두면 자동 매칭됩니다."
+    )
+    st.stop()
 
 if not (DRIVE_LOOKBOOK_FOLDER_ID and DRIVE_LOOKBOOK_INDEX_ID):
     st.error("DRIVE_LOOKBOOK_FOLDER_ID, DRIVE_LOOKBOOK_INDEX_ID 환경변수 설정 필요")
