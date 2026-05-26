@@ -86,3 +86,28 @@ def find_images_for_section(
             return tier3[:top_n]
 
     return base[:top_n]
+
+
+class LibraryRepository:
+    """Drive에서 인덱스를 로드하고 메모리 캐시한다."""
+
+    def __init__(self, drive, index_drive_id: str, cache_dir: Path):
+        self.drive = drive
+        self.index_drive_id = index_drive_id
+        self.cache_dir = cache_dir
+        self._items: Optional[list[dict[str, Any]]] = None
+
+    def list_all(self) -> list[dict[str, Any]]:
+        """인덱스를 반환한다. 캐시되어 있지 않으면 Drive에서 가져옴."""
+        if self._items is None:
+            local_index = self.drive.download(self.index_drive_id, mime_suffix=".json")
+            self._items = load_index(local_index)
+        return self._items
+
+    def refresh(self) -> None:
+        """다음 list_all() 호출 시 Drive에서 다시 가져오도록 캐시 무효화."""
+        self._items = None
+
+    def find_for_section(self, brief: dict, section_key: str, top_n: int = 5
+                         ) -> list[dict[str, Any]]:
+        return find_images_for_section(self.list_all(), brief, section_key, top_n)

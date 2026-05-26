@@ -78,3 +78,62 @@ def test_match_respects_top_n_limit():
     brief = {"brand": "Z", "model": "Z", "designer": "Z"}
     result = find_images_for_section(items, brief, "01_hero", top_n=1)
     assert len(result) == 1
+
+
+from unittest.mock import MagicMock
+from pipeline.library import LibraryRepository
+
+
+def test_repository_loads_from_drive_on_first_access(tmp_path):
+    """LibraryRepository는 첫 접근 시 Drive에서 _index.json을 가져온다."""
+    cache_dir = tmp_path / "cache"
+    mock_drive = MagicMock()
+    mock_drive.download.return_value = FIXTURE
+
+    repo = LibraryRepository(drive=mock_drive, index_drive_id="INDEX_ID",
+                              cache_dir=cache_dir)
+    items = repo.list_all()
+
+    assert len(items) == 4
+    mock_drive.download.assert_called_with("INDEX_ID", mime_suffix=".json")
+
+
+def test_repository_caches_index_until_refresh(tmp_path):
+    """두 번째 호출은 캐시 사용."""
+    mock_drive = MagicMock()
+    mock_drive.download.return_value = FIXTURE
+
+    repo = LibraryRepository(drive=mock_drive, index_drive_id="INDEX_ID",
+                              cache_dir=tmp_path / "cache")
+    repo.list_all()
+    repo.list_all()
+
+    assert mock_drive.download.call_count == 1
+
+
+def test_repository_refresh_invalidates_cache(tmp_path):
+    """refresh() 후에는 다시 download 호출."""
+    mock_drive = MagicMock()
+    mock_drive.download.return_value = FIXTURE
+
+    repo = LibraryRepository(drive=mock_drive, index_drive_id="INDEX_ID",
+                              cache_dir=tmp_path / "cache")
+    repo.list_all()
+    repo.refresh()
+    repo.list_all()
+
+    assert mock_drive.download.call_count == 2
+
+
+def test_repository_find_for_section_delegates(tmp_path):
+    """find_for_section은 find_images_for_section을 호출."""
+    mock_drive = MagicMock()
+    mock_drive.download.return_value = FIXTURE
+
+    repo = LibraryRepository(drive=mock_drive, index_drive_id="INDEX_ID",
+                              cache_dir=tmp_path / "cache")
+    result = repo.find_for_section(
+        {"brand": "B&B Italia", "model": "Charles"}, "01_hero"
+    )
+    assert len(result) == 1
+    assert result[0]["id"] == "bbi-charles-living-001"
