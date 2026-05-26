@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.local
+secrets/
+.streamlit/secrets.toml
+/tmp/
+*.log
+.venv/
+venv/
+output/
+tests/_fixtures/.cache/
