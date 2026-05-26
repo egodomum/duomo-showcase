@@ -197,15 +197,207 @@ def _step2_copy():
             st.rerun()
 
 
-# 라우팅
+from pipeline.library import LibraryRepository
+from pipeline.compose import render_section, load_tokens
+from pipeline.stitch import stitch_sections, SECTION_ORDER
+from storage.drive import DriveClient
+
+from googleapiclient.discovery import build as g_build
+
+
+DRIVE_LOOKBOOK_INDEX_ID = os.getenv("DRIVE_LOOKBOOK_INDEX_ID")
+DRIVE_OUTPUT_FOLDER_ID = os.getenv("DRIVE_OUTPUT_FOLDER_ID")
+FONTS_DIR = Path(__file__).parent.parent / "fonts"
+TOKENS_PATH = Path(__file__).parent.parent / "design_tokens" / "premium-editorial.json"
+
+
+@st.cache_resource
+def _drive_client():
+    """현재 세션 credentials로 Drive 클라이언트 생성."""
+    creds = st.session_state.get("credentials")
+    if not creds:
+        return None
+    service = g_build("drive", "v3", credentials=creds)
+    cache_dir = Path("/tmp/duomo-drive-cache")
+    return DriveClient(service=service, cache_dir=cache_dir)
+
+
+@st.cache_resource
+def _library_repo():
+    drive = _drive_client()
+    if not drive or not DRIVE_LOOKBOOK_INDEX_ID:
+        return None
+    return LibraryRepository(
+        drive=drive,
+        index_drive_id=DRIVE_LOOKBOOK_INDEX_ID,
+        cache_dir=Path("/tmp/duomo-library-cache"),
+    )
+
+
+def _step3_compose():
+    st.header("3단계 · 이미지 선택 및 합성")
+    tokens = load_tokens(TOKENS_PATH)
+    repo = _library_repo()
+
+    if "section_choices" not in st.session_state:
+        # 이미지 섹션 자동 매칭 초기화
+        st.session_state.section_choices = {}
+        for section_key, cfg in tokens["sections"].items():
+            if cfg["mode"] in ("image", "image_split"):
+                if repo:
+                    matches = repo.find_for_section(
+                        st.session_state.brief, section_key, top_n=5,
+                    )
+                else:
+                    matches = []
+                st.session_state.section_choices[section_key] = {
+                    "candidates": matches,
+                    "selected_drive_id": matches[0]["drive_id"] if matches else None,
+                    "uploaded_path": None,
+                }
+
+    # 이미지 섹션별 선택 UI
+    for section_key, cfg in tokens["sections"].items():
+        if cfg["mode"] not in ("image", "image_split"):
+            continue
+        with st.expander(f"🖼️ {section_key} (이미지)", expanded=False):
+            choice = st.session_state.section_choices[section_key]
+            if choice["candidates"]:
+                labels = [f"{c['brand']} / {c.get('model','-')} / {c['id']}"
+                          for c in choice["candidates"]]
+                sel = st.radio(
+                    "라이브러리에서 선택", labels, key=f"radio_{section_key}",
+                    index=0,
+                )
+                sel_idx = labels.index(sel)
+                choice["selected_drive_id"] = choice["candidates"][sel_idx]["drive_id"]
+            else:
+                st.warning("라이브러리 매칭 없음. 직접 업로드하세요.")
+            upl = st.file_uploader(
+                "또는 직접 업로드 (선택 시 라이브러리보다 우선)",
+                type=["jpg", "jpeg", "png"], key=f"upl_{section_key}",
+            )
+            if upl:
+                p = Path("/tmp/duomo-uploads") / st.session_state["user_email"] / f"{section_key}_{upl.name}"
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_bytes(upl.read())
+                choice["uploaded_path"] = str(p)
+
+    st.markdown("---")
+    if st.button("🎨 13섹션 합성", type="primary"):
+        _render_all_sections(tokens, repo)
+        st.session_state.rendered = True
+
+    if st.session_state.get("rendered"):
+        _show_previews()
+        st.markdown("---")
+        if st.button("📦 합본 PNG 생성 + 다운로드", type="primary"):
+            _stitch_and_offer_download()
+
+
+def _render_all_sections(tokens, repo):
+    drive = _drive_client()
+    fonts_dir = FONTS_DIR
+    out_dir = Path("/tmp/duomo-render") / st.session_state["user_email"]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    st.session_state.rendered_paths = {}
+
+    progress = st.progress(0.0)
+    sections = list(tokens["sections"].items())
+    for i, (section_key, cfg) in enumerate(sections):
+        progress.progress((i + 1) / len(sections), text=f"렌더링 중: {section_key}")
+        # 이미지 경로 결정
+        ref_paths = []
+        if cfg["mode"] in ("image", "image_split"):
+            choice = st.session_state.section_choices.get(section_key, {})
+            if choice.get("uploaded_path"):
+                ref_paths = [Path(choice["uploaded_path"])]
+            elif choice.get("selected_drive_id") and drive:
+                ref_paths = [drive.download(choice["selected_drive_id"])]
+        copy_data = st.session_state.copy_data.get(f"section_{section_key}", {})
+        try:
+            img = render_section(
+                section_key=section_key,
+                copy_data=copy_data,
+                tokens=tokens,
+                fonts_dir=fonts_dir,
+                ref_images=ref_paths,
+            )
+            out_path = out_dir / f"{section_key}.png"
+            img.save(out_path, "PNG")
+            st.session_state.rendered_paths[section_key] = out_path
+        except Exception as e:
+            st.error(f"{section_key} 렌더링 실패: {e}")
+
+
+def _show_previews():
+    st.subheader("미리보기")
+    for section_key in SECTION_ORDER:
+        path = st.session_state.rendered_paths.get(section_key)
+        if not path:
+            continue
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.image(str(path), use_container_width=True, caption=section_key)
+        with col2:
+            if st.button(f"🔄 재생성", key=f"regen_{section_key}"):
+                tokens = load_tokens(TOKENS_PATH)
+                # 단일 섹션 재렌더
+                cfg = tokens["sections"][section_key]
+                drive = _drive_client()
+                ref_paths = []
+                if cfg["mode"] in ("image", "image_split"):
+                    choice = st.session_state.section_choices.get(section_key, {})
+                    if choice.get("uploaded_path"):
+                        ref_paths = [Path(choice["uploaded_path"])]
+                    elif choice.get("selected_drive_id") and drive:
+                        ref_paths = [drive.download(choice["selected_drive_id"])]
+                copy_data = st.session_state.copy_data.get(f"section_{section_key}", {})
+                try:
+                    img = render_section(
+                        section_key=section_key, copy_data=copy_data,
+                        tokens=tokens, fonts_dir=FONTS_DIR, ref_images=ref_paths,
+                    )
+                    img.save(path, "PNG")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"재생성 실패: {e}")
+
+
+def _stitch_and_offer_download():
+    out = Path("/tmp/duomo-render") / st.session_state["user_email"] / "final.png"
+    stitch_sections(st.session_state.rendered_paths, out)
+    st.success(f"합본 생성 완료: {out}")
+    with open(out, "rb") as f:
+        st.download_button(
+            "📥 합본 PNG 다운로드",
+            data=f, file_name="duomo_landing.png", mime="image/png",
+        )
+
+    # Drive 자동 업로드
+    drive = _drive_client()
+    if drive and DRIVE_OUTPUT_FOLDER_ID:
+        try:
+            file_id = drive.upload(
+                out, DRIVE_OUTPUT_FOLDER_ID,
+                name=f"{st.session_state.brief.get('brand','x')}_{st.session_state.brief.get('model','x')}_landing.png",
+            )
+            st.info(f"Drive 업로드 완료: {file_id}")
+        except Exception as e:
+            st.warning(f"Drive 업로드 실패: {e}")
+
+
+# 라우팅 업데이트
 if st.session_state.wizard_step == 1:
     _step1_brief()
 elif st.session_state.wizard_step == 2:
     _step2_copy()
+elif st.session_state.wizard_step == 3:
+    _step3_compose()
 else:
-    st.info(f"단계 {st.session_state.wizard_step} 구현은 다음 task에서.")
+    st.error(f"알 수 없는 단계: {st.session_state.wizard_step}")
     if st.button("처음으로"):
-        st.session_state.wizard_step = 1
-        for k in ["copy_data", "research", "design"]:
+        for k in ["wizard_step", "copy_data", "research", "design",
+                  "section_choices", "rendered", "rendered_paths"]:
             st.session_state.pop(k, None)
         st.rerun()
