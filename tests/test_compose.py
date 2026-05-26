@@ -125,7 +125,7 @@ def test_render_typo_section_dark_mode():
     assert r < 50 and g < 50 and b < 50
 
 
-from pipeline.compose import render_image_section
+from pipeline.compose import render_image_section, ComposeError
 
 
 SAMPLE_COPY_HERO = {
@@ -173,3 +173,42 @@ def test_render_image_section_solution_no_overlay():
         fonts_dir=FONTS_DIR,
     )
     assert img.size == (1200, 400)
+
+
+from pipeline.compose import render_section
+
+
+def test_render_section_dispatches_image_mode():
+    tokens = load_tokens(TOKENS_PATH)
+    img = render_section(
+        section_key="01_hero",
+        copy_data=SAMPLE_COPY_HERO,
+        tokens=tokens,
+        fonts_dir=FONTS_DIR,
+        ref_images=[SAMPLE_REF],
+    )
+    assert img.size == (1200, 800)
+
+
+def test_render_section_dispatches_typo_mode():
+    tokens = load_tokens(TOKENS_PATH)
+    img = render_section(
+        section_key="02_pain",
+        copy_data=SAMPLE_COPY_PAIN,
+        tokens=tokens,
+        fonts_dir=FONTS_DIR,
+        ref_images=[],
+    )
+    assert img.size == (1200, 600)
+
+
+def test_render_section_image_mode_requires_ref():
+    tokens = load_tokens(TOKENS_PATH)
+    with pytest.raises(ComposeError):
+        render_section(
+            section_key="01_hero",
+            copy_data=SAMPLE_COPY_HERO,
+            tokens=tokens,
+            fonts_dir=FONTS_DIR,
+            ref_images=[],
+        )

@@ -327,3 +327,40 @@ def render_image_section(
         )
 
     return bg
+
+
+def render_section(
+    *,
+    section_key: str,
+    copy_data: dict[str, Any],
+    tokens: dict[str, Any],
+    fonts_dir: Path,
+    ref_images: list[Path],
+) -> Image.Image:
+    """섹션 모드에 따라 image/typo/image_split 렌더러로 분기."""
+    section_cfg = tokens["sections"][section_key]
+    mode = section_cfg["mode"]
+
+    if mode == "typo":
+        return render_typo_section(
+            section_key=section_key,
+            copy_data=copy_data,
+            tokens=tokens,
+            fonts_dir=fonts_dir,
+        )
+
+    if mode in ("image", "image_split"):
+        if not ref_images:
+            raise ComposeError(
+                f"Section {section_key} requires reference image but none provided"
+            )
+        # MVP: image_split도 첫 번째 이미지만 사용 (V2에서 좌/우 합성 분리)
+        return render_image_section(
+            section_key=section_key,
+            copy_data=copy_data,
+            ref_image_path=ref_images[0],
+            tokens=tokens,
+            fonts_dir=fonts_dir,
+        )
+
+    raise ComposeError(f"Unknown section mode: {mode}")
