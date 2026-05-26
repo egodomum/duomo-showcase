@@ -107,11 +107,105 @@ def _step1_brief():
             st.rerun()
 
 
-# Step 2, 3은 다음 task에서 추가
+import anthropic
+from pipeline.copy import generate_research, generate_copy, generate_design_direction, CopyError
+
+PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
+
+
+@st.cache_resource
+def _claude_client():
+    return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+
+def _step2_copy():
+    st.header("2단계 · 카피 검토 및 편집")
+
+    if "copy_data" not in st.session_state:
+        client = _claude_client()
+        with st.spinner("리서치 생성 중... (약 30초)"):
+            try:
+                research = generate_research(
+                    client=client,
+                    brief=st.session_state.brief,
+                    system_prompt_path=PROMPTS_DIR / "02-research.md",
+                )
+                st.session_state.research = research
+            except CopyError as e:
+                st.error(f"리서치 생성 실패: {e}")
+                return
+
+        with st.spinner("카피 생성 중... (약 60초)"):
+            try:
+                copy_data = generate_copy(
+                    client=client,
+                    brief=st.session_state.brief,
+                    research=st.session_state.research,
+                    system_prompt_path=PROMPTS_DIR / "03-copy.md",
+                )
+                st.session_state.copy_data = copy_data
+            except CopyError as e:
+                st.error(f"카피 생성 실패: {e}")
+                return
+
+        with st.spinner("디자인 방향 결정 중..."):
+            try:
+                design = generate_design_direction(
+                    client=client,
+                    brief=st.session_state.brief,
+                    research=st.session_state.research,
+                    system_prompt_path=PROMPTS_DIR / "04-design-direction.md",
+                )
+                st.session_state.design = design
+            except CopyError as e:
+                st.error(f"디자인 방향 실패: {e}")
+                return
+
+    # 카피 편집 UI
+    edited = {}
+    for section_key, content in st.session_state.copy_data.items():
+        with st.expander(f"📝 {section_key}", expanded=False):
+            edited_content = {}
+            for field, value in content.items():
+                if isinstance(value, list):
+                    text = "\n".join(value)
+                    new_text = st.text_area(
+                        field, value=text, key=f"{section_key}_{field}", height=80,
+                    )
+                    edited_content[field] = [
+                        line for line in new_text.split("\n") if line.strip()
+                    ]
+                elif isinstance(value, dict):
+                    st.json(value)
+                    edited_content[field] = value
+                else:
+                    edited_content[field] = st.text_input(
+                        field, value=str(value), key=f"{section_key}_{field}",
+                    )
+            edited[section_key] = edited_content
+
+    col_a, col_b = st.columns([1, 1])
+    with col_a:
+        if st.button("← 브리프로 돌아가기"):
+            st.session_state.wizard_step = 1
+            del st.session_state["copy_data"]
+            st.rerun()
+    with col_b:
+        if st.button("이미지 생성 →", type="primary"):
+            st.session_state.copy_data = edited
+            st.session_state.wizard_step = 3
+            st.rerun()
+
+
+# 라우팅
 if st.session_state.wizard_step == 1:
     _step1_brief()
+elif st.session_state.wizard_step == 2:
+    _step2_copy()
 else:
     st.info(f"단계 {st.session_state.wizard_step} 구현은 다음 task에서.")
     if st.button("처음으로"):
         st.session_state.wizard_step = 1
+        for k in ["copy_data", "research", "design"]:
+            st.session_state.pop(k, None)
         st.rerun()
