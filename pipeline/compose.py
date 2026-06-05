@@ -84,6 +84,91 @@ def draw_hairline(
         draw.line([(x, y + t), (x + length, y + t)], fill=color)
 
 
+def _spacing_px(spec: dict[str, Any]) -> int:
+    """타이포 스펙의 자간을 픽셀로 환산."""
+    return int(spec["size_desktop"] * spec.get("letter_spacing_ratio", 0))
+
+
+def _line_width(text: str, font: ImageFont.FreeTypeFont, spacing_px: int) -> float:
+    """draw_text와 동일한 방식으로 한 줄의 픽셀 너비를 잰다."""
+    if not text:
+        return 0.0
+    if spacing_px == 0:
+        return font.getlength(text)
+    width = 0.0
+    for ch in text:
+        bbox = font.getbbox(ch)
+        width += (bbox[2] - bbox[0]) + spacing_px
+    return width
+
+
+def wrap_text(
+    text: str,
+    font: ImageFont.FreeTypeFont,
+    spacing_px: int,
+    max_width: int,
+) -> list[str]:
+    """max_width(px)에 맞춰 텍스트를 여러 줄로 나눈다.
+
+    공백 단위(어절)로 먼저 끊고, 한 어절이 너무 길면 글자 단위로 끊는다.
+    한글·영문 혼용 모두 안전하게 처리한다.
+    """
+    if not text:
+        return []
+    lines: list[str] = []
+    current = ""
+    for word in text.split(" "):
+        candidate = word if not current else current + " " + word
+        if _line_width(candidate, font, spacing_px) <= max_width:
+            current = candidate
+            continue
+        if current:
+            lines.append(current)
+            current = ""
+        # 어절 자체가 max_width를 넘으면 글자 단위로 강제 분할
+        if _line_width(word, font, spacing_px) <= max_width:
+            current = word
+        else:
+            chunk = ""
+            for ch in word:
+                if _line_width(chunk + ch, font, spacing_px) <= max_width:
+                    chunk += ch
+                else:
+                    if chunk:
+                        lines.append(chunk)
+                    chunk = ch
+            current = chunk
+    if current:
+        lines.append(current)
+    return lines
+
+
+def _line_height(spec: dict[str, Any]) -> int:
+    """스펙의 줄 높이(px)."""
+    return int(spec["size_desktop"] * spec.get("line_height_ratio", 1.4))
+
+
+def draw_paragraph(
+    img: Image.Image,
+    *,
+    text: str,
+    position: tuple[int, int],
+    spec: dict[str, Any],
+    color: str,
+    fonts_dir: Path,
+    max_width: int,
+) -> int:
+    """줄바꿈을 적용해 문단을 그리고, 마지막 줄 다음의 y 좌표를 반환한다."""
+    font = load_font(spec, fonts_dir)
+    lines = wrap_text(text, font, _spacing_px(spec), max_width)
+    x, y = position
+    lh = _line_height(spec)
+    for line in lines:
+        draw_text(img, text=line, position=(x, y), spec=spec, color=color, fonts_dir=fonts_dir)
+        y += lh
+    return y
+
+
 def _background_color(section_cfg: dict, tokens: dict) -> str:
     """섹션 background 모드에서 색상 코드를 결정한다."""
     bg_mode = section_cfg.get("background", "off-white")
@@ -127,20 +212,26 @@ def render_typo_section(
 
     pad_x = tokens["layout"]["outer_padding_x"]
     pad_y = tokens["layout"]["section_inner_padding_y"]
+    max_width = width - 2 * pad_x
 
-    # 상단 라벨 또는 헤드라인
+    # 위에서 아래로 흐르는 y 커서 (고정 좌표 충돌 방지)
+    y = pad_y
+
+    # 상단 헤드라인
     top_text = copy_data.get("intro") or copy_data.get("hook") or copy_data.get("headline")
     if top_text:
-        draw_text(
+        y = draw_paragraph(
             img,
             text=top_text,
-            position=(pad_x, pad_y),
+            position=(pad_x, y),
             spec=tokens["typography"]["headline_kr"],
             color=text_primary,
             fonts_dir=fonts_dir,
+            max_width=max_width,
         )
+        y += 36  # 헤드라인 다음 여백
 
-    # 본문 리스트
+    # 본문 리스트 (골드 대시 + 줄바꿈되는 본문)
     list_items = (
         copy_data.get("pain_points")
         or copy_data.get("reasons")
@@ -148,30 +239,30 @@ def render_typo_section(
         or copy_data.get("recommended")
         or []
     )
-    body_y = pad_y + 100
     body_spec = tokens["typography"]["body"]
-    line_height = int(body_spec["size_desktop"] * body_spec["line_height_ratio"]) + 12
+    dash_offset = 30
+    list_max_width = max_width - dash_offset
     for item in list_items[:6]:
-        # 골드 대시 + 본문
         draw_text(
             img,
             text="—",
-            position=(pad_x, body_y),
-            spec=tokens["typography"]["body"],
+            position=(pad_x, y),
+            spec=body_spec,
             color=accent,
             fonts_dir=fonts_dir,
         )
-        draw_text(
+        end_y = draw_paragraph(
             img,
             text=item,
-            position=(pad_x + 30, body_y),
-            spec=tokens["typography"]["body"],
+            position=(pad_x + dash_offset, y),
+            spec=body_spec,
             color=text_primary,
             fonts_dir=fonts_dir,
+            max_width=list_max_width,
         )
-        body_y += line_height
+        y = end_y + 14  # 항목 간 여백
 
-    # 하단 골드 헤어라인 + 마무리
+    # 하단 골드 헤어라인 + 마무리 (y 커서 이어서 — 겹치지 않음)
     closing = (
         copy_data.get("emotional_hook")
         or copy_data.get("reframe")
@@ -179,20 +270,22 @@ def render_typo_section(
         or copy_data.get("question")
     )
     if closing:
-        hairline_y = height - pad_y - 50
+        y += 16
         draw_hairline(
             img,
-            position=(pad_x, hairline_y),
+            position=(pad_x, y),
             length=tokens["layout"]["divider_width"],
             color=accent,
         )
-        draw_text(
+        y += 20
+        draw_paragraph(
             img,
             text=closing,
-            position=(pad_x, hairline_y + 20),
+            position=(pad_x, y),
             spec=tokens["typography"]["subheadline"],
             color=text_secondary,
             fonts_dir=fonts_dir,
+            max_width=max_width,
         )
 
     return img
@@ -274,6 +367,7 @@ def render_image_section(
 
     pad_x = tokens["layout"]["outer_padding_x"]
     pad_y = tokens["layout"]["section_inner_padding_y"]
+    max_width = width - 2 * pad_x
 
     # 상단 라벨 (urgency_badge 또는 intro)
     badge = copy_data.get("urgency_badge") or copy_data.get("intro")
@@ -288,39 +382,56 @@ def render_image_section(
             fonts_dir=fonts_dir,
         )
 
-    # 중앙 헤드라인 (headline_options[0] 또는 product_name)
+    # 하단 CTA 위치 선계산 (있을 경우)
+    cta = copy_data.get("cta_text") or copy_data.get("cta_button")
+    cta_y = height - pad_y - 30
+
+    # 중앙 블록(헤드라인 + 서브) — 줄바꿈 후 블록 높이를 재서 수직 중앙 배치
     headline = (
         (copy_data.get("headline_options") or [None])[0]
         or copy_data.get("product_name")
         or copy_data.get("headline")
         or ""
     )
-    if headline:
-        draw_text(
-            bg, text=headline,
-            position=(pad_x, height // 2 - 40),
-            spec=tokens["typography"]["headline_kr"],
-            color=text_primary,
-            fonts_dir=fonts_dir,
-        )
-
-    # 서브헤드 (subheadline 또는 one_liner)
     sub = copy_data.get("subheadline") or copy_data.get("one_liner")
-    if sub:
-        draw_text(
-            bg, text=sub,
-            position=(pad_x, height // 2 + 30),
-            spec=tokens["typography"]["subheadline"],
-            color=text_secondary,
-            fonts_dir=fonts_dir,
-        )
 
-    # 하단 CTA (있을 경우)
-    cta = copy_data.get("cta_text") or copy_data.get("cta_button")
+    hl_spec = tokens["typography"]["headline_kr"]
+    sub_spec = tokens["typography"]["subheadline"]
+    hl_font = load_font(hl_spec, fonts_dir)
+    sub_font = load_font(sub_spec, fonts_dir)
+    hl_lines = wrap_text(headline, hl_font, _spacing_px(hl_spec), max_width) if headline else []
+    sub_lines = wrap_text(sub, sub_font, _spacing_px(sub_spec), max_width) if sub else []
+    hl_lh = _line_height(hl_spec)
+    sub_lh = _line_height(sub_spec)
+    gap = 24
+
+    block_h = (
+        len(hl_lines) * hl_lh
+        + (gap if hl_lines and sub_lines else 0)
+        + len(sub_lines) * sub_lh
+    )
+
+    top_limit = pad_y + 50
+    bottom_limit = (cta_y - 24) if cta else (height - pad_y)
+    avail = bottom_limit - top_limit
+    y = top_limit + max(0, (avail - block_h) // 2)
+
+    for line in hl_lines:
+        draw_text(bg, text=line, position=(pad_x, y), spec=hl_spec,
+                  color=text_primary, fonts_dir=fonts_dir)
+        y += hl_lh
+    if hl_lines and sub_lines:
+        y += gap
+    for line in sub_lines:
+        draw_text(bg, text=line, position=(pad_x, y), spec=sub_spec,
+                  color=text_secondary, fonts_dir=fonts_dir)
+        y += sub_lh
+
+    # 하단 CTA
     if cta:
         draw_text(
             bg, text=cta.upper(),
-            position=(pad_x, height - pad_y - 30),
+            position=(pad_x, cta_y),
             spec=tokens["typography"]["cta"],
             color=text_primary,
             fonts_dir=fonts_dir,
