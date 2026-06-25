@@ -99,7 +99,8 @@ def generate_background(
     url = f"{API_BASE}/{model}:generateContent?key={api_key}"
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"responseModalities": ["IMAGE"]},
+        # 이 모델은 IMAGE 단독을 거부(500)하므로 TEXT도 함께 요청해야 한다.
+        "generationConfig": {"responseModalities": ["TEXT", "IMAGE"]},
     }
 
     last_err: Optional[Exception] = None

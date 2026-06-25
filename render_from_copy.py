@@ -17,8 +17,12 @@ import json
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from pipeline.compose import render_section, load_tokens
 from pipeline.stitch import stitch_sections
+
+load_dotenv()
 
 PROJECT = Path(__file__).parent
 TOKENS_PATH = PROJECT / "design_tokens" / "premium-editorial.json"
