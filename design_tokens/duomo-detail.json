@@ -1,0 +1,103 @@
+{
+  "preset_name": "duomo-detail",
+  "_source": "DUOMO Figma 실측 (Artemide Onfale 상세페이지) — docs/playbook/visual-tone.md",
+  "color": {
+    "primary": "#2C2C2C",
+    "secondary": "#838486",
+    "accent": "#DE0515",
+    "_accent_note": "브랜드별 컬러. 브리프의 brand_color로 덮어쓸 것 (Artemide=#DE0515)",
+    "background": "#FFFFFF",
+    "background_alt": "#2C2C2C",
+    "text_primary": "#2C2C2C",
+    "text_secondary": "#838486",
+    "text_inverse": "#FFFFFF",
+    "divider": "#C4C4C4",
+    "muted": "#C4C4C4"
+  },
+  "typography": {
+    "headline_serif": {
+      "font_file": "NotoSerifDisplay-SemiBold.ttf",
+      "size_desktop": 106,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.0
+    },
+    "headline_serif_sub": {
+      "font_file": "NotoSerifDisplay-SemiBold.ttf",
+      "size_desktop": 80,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.0
+    },
+    "headline_kr": {
+      "font_file": "Pretendard-SemiBold.otf",
+      "size_desktop": 40,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.0
+    },
+    "subheadline": {
+      "font_file": "Pretendard-Regular.otf",
+      "size_desktop": 40,
+      "letter_spacing_ratio": -0.02,
+      "line_height_ratio": 1.44
+    },
+    "body": {
+      "font_file": "Pretendard-Medium.otf",
+      "size_desktop": 40,
+      "letter_spacing_ratio": -0.02,
+      "line_height_ratio": 1.44
+    },
+    "label": {
+      "font_file": "Pretendard-SemiBold.otf",
+      "size_desktop": 40,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.0
+    },
+    "option_value": {
+      "font_file": "Pretendard-Medium.otf",
+      "size_desktop": 32,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.0
+    },
+    "cta": {
+      "font_file": "Pretendard-SemiBold.otf",
+      "size_desktop": 32,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.0
+    },
+    "label_uppercase": {
+      "font_file": "Pretendard-SemiBold.otf",
+      "size_desktop": 28,
+      "letter_spacing_ratio": 0.04,
+      "line_height_ratio": 1.0
+    },
+    "brand_name": {
+      "font_file": "NotoSerifDisplay-SemiBold.ttf",
+      "size_desktop": 106,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.0
+    }
+  },
+  "layout": {
+    "max_width": 1000,
+    "outer_padding_x": 80,
+    "section_inner_padding_y": 160,
+    "divider_width": 80,
+    "divider_thickness": 2,
+    "align": "center"
+  },
+  "_layout_note": "Figma 실측 섹션 패딩은 270px이나, 합본 높이 폭증 방지를 위해 160px로 보수 적용. 단일 섹션 강조 시 확대 가능.",
+  "sections": {
+    "01_hero":          { "height": 1200, "mode": "image",        "background": "image_overlay_dark" },
+    "02_pain":          { "height": 700,  "mode": "typo",         "background": "off-white" },
+    "03_problem":       { "height": 700,  "mode": "typo",         "background": "dark" },
+    "04_story":         { "height": 900,  "mode": "image_split",  "background": "off-white" },
+    "05_solution":      { "height": 600,  "mode": "image",        "background": "off-white" },
+    "06_how_it_works":  { "height": 800,  "mode": "image",        "background": "off-white" },
+    "07_social_proof":  { "height": 900,  "mode": "typo",         "background": "dark" },
+    "08_authority":     { "height": 800,  "mode": "image",        "background": "off-white" },
+    "09_benefits":      { "height": 900,  "mode": "typo",         "background": "off-white" },
+    "10_risk_removal":  { "height": 700,  "mode": "typo",         "background": "off-white" },
+    "11_comparison":    { "height": 600,  "mode": "typo",         "background": "off-white" },
+    "12_target_filter": { "height": 600,  "mode": "typo",         "background": "off-white" },
+    "13_final_cta":     { "height": 900,  "mode": "image",        "background": "image_overlay_dark" }
+  }
+}
