@@ -125,3 +125,31 @@ def generate_design_direction(
         max_tokens=max_tokens,
         label="design",
     )
+
+
+def generate_block_copy(
+    *,
+    client,
+    block_type: str,
+    copy_schema: dict,
+    meta: dict,
+    system_prompt_path: Path,
+    model: str = "claude-sonnet-4-5",
+    max_tokens: int = 2000,
+) -> dict:
+    """쇼케이스 블록 하나의 카피를 생성한다. JSON 파싱 실패 시 1회 재시도.
+
+    Raises:
+        CopyError: 2회 시도 후에도 JSON 파싱 실패
+    """
+    system = system_prompt_path.read_text(encoding="utf-8")
+    user = (
+        f"블록타입: {block_type}\n"
+        f"copy_schema: {json.dumps(copy_schema, ensure_ascii=False)}\n"
+        f"meta: {json.dumps(meta, ensure_ascii=False)}\n\n"
+        "copy_schema의 키를 모두 채운 JSON만 출력하라."
+    )
+    return _call_with_retry(
+        client=client, system_prompt=system, user_msg=user,
+        model=model, max_tokens=max_tokens, label=f"block:{block_type}",
+    )
