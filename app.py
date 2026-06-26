@@ -24,6 +24,17 @@ st.set_page_config(
 )
 
 
+@st.cache_resource
+def _bootstrap_chromium():
+    """배포 환경(Streamlit Cloud)에서 Chromium 1회 보장. 캐시로 프로세스당 1회."""
+    from render.bootstrap import ensure_chromium
+    ensure_chromium()
+    return True
+
+
+_bootstrap_chromium()
+
+
 def _gate_oauth() -> None:
     """OAuth 가드 — 미인증 사용자는 로그인 화면.
 
