@@ -35,15 +35,6 @@ if "wizard_step" not in st.session_state:
     st.session_state.wizard_step = 1
 
 
-def _claude():
-    """Anthropic 클라이언트. 키 없으면 None (카피 생성 비활성)."""
-    key = os.getenv("ANTHROPIC_API_KEY")
-    if not key:
-        return None
-    import anthropic
-    return anthropic.Anthropic(api_key=key)
-
-
 def _step1_meta():
     st.header("1단계 · 기본 정보")
     with st.form("meta"):
@@ -126,21 +117,22 @@ def _step3_data():
     for i, blk in enumerate(r["blocks"]):
         spec = get_block(blk["type"]).spec
         with st.expander(f"{i+1}. {spec.label} ({blk['type']})", expanded=False):
-            if spec.copy_schema and st.button("✨ 카피 생성", key=f"gen{i}"):
-                client = _claude()
-                if client is None:
+            if spec.copy_schema and st.button("✨ 카피 생성 (Gemini 무료)", key=f"gen{i}"):
+                if not os.getenv("GEMINI_API_KEY"):
                     st.warning(
-                        "카피 자동생성은 ANTHROPIC_API_KEY가 필요합니다. "
-                        "키 없이도 아래 칸에 카피를 직접 입력하면 렌더됩니다. "
-                        "(앱 Settings → Secrets에 ANTHROPIC_API_KEY 추가 시 자동생성 활성화)"
+                        "카피 자동생성은 GEMINI_API_KEY가 필요합니다(무료). "
+                        "키 없이도 아래 칸에 직접 입력하면 렌더됩니다. "
+                        "(Settings → Secrets에 GEMINI_API_KEY 추가 시 활성화)"
                     )
                 else:
-                    from pipeline.copy import generate_block_copy, CopyError
+                    from pipeline.copy_gemini import generate_block_copy_gemini
+                    from pipeline.copy import CopyError
                     try:
-                        out = generate_block_copy(
-                            client=client, block_type=blk["type"],
-                            copy_schema=spec.copy_schema, meta=r["meta"],
-                            system_prompt_path=PROMPTS / "showcase-copy.md")
+                        with st.spinner("카피 생성 중..."):
+                            out = generate_block_copy_gemini(
+                                block_type=blk["type"],
+                                copy_schema=spec.copy_schema, meta=r["meta"],
+                                system_prompt_path=PROMPTS / "showcase-copy.md")
                         blk["data"].update(out)
                         st.rerun()
                     except CopyError as e:
