@@ -10,6 +10,9 @@ from blocks.dimension import DimensionBlock
 from blocks.hero import HeroBlock
 from blocks.intro import IntroBlock
 from blocks.lifestyle import LifestyleBlock
+from blocks.material import MaterialBlock
+from blocks.spec_table import SpecTableBlock
+from blocks.trust_block import TrustBlock
 
 
 class BlockNotFound(Exception):
@@ -25,7 +28,8 @@ def _register(block: Block) -> None:
 
 for _b in (HeroBlock(), BrandBlock(), DesignerBlock(),
            IntroBlock(), LifestyleBlock(), ClosingBlock(),
-           ColorOptionsBlock(), DimensionBlock()):
+           ColorOptionsBlock(), DimensionBlock(),
+           TrustBlock(), SpecTableBlock(), MaterialBlock()):
     _register(_b)
 
 
