@@ -1,0 +1,81 @@
+{
+  "preset_name": "premium-editorial",
+  "color": {
+    "primary": "#1A1A1A",
+    "secondary": "#3D3D3D",
+    "accent": "#B8975A",
+    "background": "#FAFAF7",
+    "background_alt": "#1A1A1A",
+    "text_primary": "#1A1A1A",
+    "text_secondary": "#6B6B6B",
+    "text_inverse": "#FAFAF7",
+    "divider": "#B8975A",
+    "muted": "#C9C3B8"
+  },
+  "typography": {
+    "headline_serif": {
+      "font_file": "PlayfairDisplay-Regular.ttf",
+      "size_desktop": 60,
+      "letter_spacing_ratio": -0.005,
+      "line_height_ratio": 1.3
+    },
+    "headline_kr": {
+      "font_file": "Pretendard-Light.otf",
+      "size_desktop": 48,
+      "letter_spacing_ratio": -0.005,
+      "line_height_ratio": 1.3
+    },
+    "subheadline": {
+      "font_file": "Pretendard-Light.otf",
+      "size_desktop": 24,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.5
+    },
+    "body": {
+      "font_file": "Pretendard-Light.otf",
+      "size_desktop": 17,
+      "letter_spacing_ratio": 0,
+      "line_height_ratio": 1.75
+    },
+    "cta": {
+      "font_file": "Pretendard-Medium.otf",
+      "size_desktop": 16,
+      "letter_spacing_ratio": 0.06,
+      "line_height_ratio": 1.4
+    },
+    "label_uppercase": {
+      "font_file": "Pretendard-Medium.otf",
+      "size_desktop": 13,
+      "letter_spacing_ratio": 0.08,
+      "line_height_ratio": 1.4
+    },
+    "brand_name": {
+      "font_file": "PlayfairDisplay-Regular.ttf",
+      "size_desktop": 48,
+      "letter_spacing_ratio": 0.08,
+      "line_height_ratio": 1.3
+    }
+  },
+  "layout": {
+    "max_width": 1200,
+    "outer_padding_x": 72,
+    "section_inner_padding_y": 80,
+    "divider_width": 60,
+    "divider_thickness": 1
+  },
+  "sections": {
+    "01_hero":          { "height": 800, "mode": "image",        "background": "image_overlay_dark" },
+    "02_pain":          { "height": 600, "mode": "typo",         "background": "off-white" },
+    "03_problem":       { "height": 500, "mode": "typo",         "background": "dark" },
+    "04_story":         { "height": 700, "mode": "image_split",  "background": "off-white" },
+    "05_solution":      { "height": 400, "mode": "image",        "background": "off-white" },
+    "06_how_it_works":  { "height": 600, "mode": "image",        "background": "off-white" },
+    "07_social_proof":  { "height": 800, "mode": "typo",         "background": "dark" },
+    "08_authority":     { "height": 500, "mode": "image",        "background": "off-white" },
+    "09_benefits":      { "height": 700, "mode": "typo",         "background": "off-white" },
+    "10_risk_removal":  { "height": 500, "mode": "typo",         "background": "off-white" },
+    "11_comparison":    { "height": 400, "mode": "typo",         "background": "off-white" },
+    "12_target_filter": { "height": 400, "mode": "typo",         "background": "off-white" },
+    "13_final_cta":     { "height": 600, "mode": "image",        "background": "image_overlay_dark" }
+  }
+}

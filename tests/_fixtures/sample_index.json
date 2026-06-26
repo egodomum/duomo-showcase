@@ -1,0 +1,58 @@
+[
+  {
+    "id": "bbi-charles-living-001",
+    "drive_id": "DRIVE_ID_001",
+    "brand": "B&B Italia",
+    "model": "Charles",
+    "designer": "Antonio Citterio",
+    "year": 1997,
+    "type": "space",
+    "section_fit": ["01_hero", "04_story", "13_final_cta"],
+    "tags": ["modular", "sofa", "living", "natural-light"],
+    "orientation": "landscape",
+    "added_by": "admin@duomo.co.kr",
+    "added_at": "2026-05-20"
+  },
+  {
+    "id": "bbi-charles-product-001",
+    "drive_id": "DRIVE_ID_002",
+    "brand": "B&B Italia",
+    "model": "Charles",
+    "designer": "Antonio Citterio",
+    "year": 1997,
+    "type": "product",
+    "section_fit": ["05_solution"],
+    "tags": ["sofa", "isolated", "studio"],
+    "orientation": "landscape",
+    "added_by": "admin@duomo.co.kr",
+    "added_at": "2026-05-20"
+  },
+  {
+    "id": "cassina-lc4-living-001",
+    "drive_id": "DRIVE_ID_003",
+    "brand": "Cassina",
+    "model": "LC4",
+    "designer": "Le Corbusier",
+    "year": 1928,
+    "type": "space",
+    "section_fit": ["01_hero", "04_story", "13_final_cta"],
+    "tags": ["chaise", "iconic", "living"],
+    "orientation": "landscape",
+    "added_by": "admin@duomo.co.kr",
+    "added_at": "2026-05-20"
+  },
+  {
+    "id": "duomo-showroom-seoul-001",
+    "drive_id": "DRIVE_ID_004",
+    "brand": "DUOMO",
+    "model": null,
+    "designer": null,
+    "year": null,
+    "type": "showroom",
+    "section_fit": ["08_authority", "06_how_it_works"],
+    "tags": ["showroom", "seoul", "interior"],
+    "orientation": "landscape",
+    "added_by": "admin@duomo.co.kr",
+    "added_at": "2026-05-20"
+  }
+]

@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.local
+secrets/
+.streamlit/secrets.toml
+/tmp/
+*.log
+.venv/
+venv/
+output/
+tests/_fixtures/.cache/
+
+# 생성된 렌더 결과물 (예시 카피 JSON은 추적, PNG는 제외)
+demo_output/**/*.png
+demo_output/*.png
