@@ -4,7 +4,9 @@ from __future__ import annotations
 from blocks.base import Block, BlockSpec
 from blocks.brand import BrandBlock
 from blocks.closing import ClosingBlock
+from blocks.color_options import ColorOptionsBlock
 from blocks.designer import DesignerBlock
+from blocks.dimension import DimensionBlock
 from blocks.hero import HeroBlock
 from blocks.intro import IntroBlock
 from blocks.lifestyle import LifestyleBlock
@@ -22,7 +24,8 @@ def _register(block: Block) -> None:
 
 
 for _b in (HeroBlock(), BrandBlock(), DesignerBlock(),
-           IntroBlock(), LifestyleBlock(), ClosingBlock()):
+           IntroBlock(), LifestyleBlock(), ClosingBlock(),
+           ColorOptionsBlock(), DimensionBlock()):
     _register(_b)
 
 
