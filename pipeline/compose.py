@@ -1,4 +1,5 @@
-"""PIL 기반 13섹션 합성 (이미지 그룹 + 타이포 그룹)."""
+"""[DEPRECATED] PIL 합성 — 쇼케이스 재설계(blocks/ + render/)로 대체됨.
+비-DUOMO 퍼널 프리셋 참조용으로만 보존. 신규 작업은 render/page_builder.py 사용."""
 from __future__ import annotations
 
 import json

@@ -1,7 +1,5 @@
-"""13장의 섹션 PNG를 세로로 이어붙여 최종 합본을 만든다.
-
-기반: ~/.claude/skills/landing-page-generator/scripts/stitch_images.py
-"""
+"""[DEPRECATED] PIL 세로 스티칭 — Playwright full_page 캡처로 대체됨.
+보존용. 신규 작업은 render/renderer.py 사용."""
 from __future__ import annotations
 
 from pathlib import Path
