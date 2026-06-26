@@ -4,6 +4,8 @@ from __future__ import annotations
 import base64
 import json as _json
 import os
+import re
+import tempfile
 from pathlib import Path
 
 import streamlit as st
@@ -158,7 +160,9 @@ def _step3_data():
     if st.button("🎨 상세페이지 렌더", type="primary"):
         refs = _collect_refs(r)
         html = build_page(r, fonts_dir=FONTS, refs=refs)
-        out_dir = Path("/tmp/duomo-showcase") / st.session_state["user_email"]
+        # OS 임시 디렉터리 사용 (Windows에서 /tmp는 C:\tmp로 해석됨). 이메일은 경로 안전하게 정규화.
+        safe_user = re.sub(r"[^A-Za-z0-9_.-]", "_", st.session_state["user_email"])
+        out_dir = Path(tempfile.gettempdir()) / "duomo-showcase" / safe_user
         out_dir.mkdir(parents=True, exist_ok=True)
         out = out_dir / "page.png"
         with st.spinner("렌더링 중..."):
