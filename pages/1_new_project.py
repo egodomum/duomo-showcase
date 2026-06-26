@@ -36,8 +36,12 @@ if "wizard_step" not in st.session_state:
 
 
 def _claude():
+    """Anthropic 클라이언트. 키 없으면 None (카피 생성 비활성)."""
+    key = os.getenv("ANTHROPIC_API_KEY")
+    if not key:
+        return None
     import anthropic
-    return anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    return anthropic.Anthropic(api_key=key)
 
 
 def _step1_meta():
@@ -123,16 +127,24 @@ def _step3_data():
         spec = get_block(blk["type"]).spec
         with st.expander(f"{i+1}. {spec.label} ({blk['type']})", expanded=False):
             if spec.copy_schema and st.button("✨ 카피 생성", key=f"gen{i}"):
-                from pipeline.copy import generate_block_copy, CopyError
-                try:
-                    out = generate_block_copy(
-                        client=_claude(), block_type=blk["type"],
-                        copy_schema=spec.copy_schema, meta=r["meta"],
-                        system_prompt_path=PROMPTS / "showcase-copy.md")
-                    blk["data"].update(out)
-                    st.rerun()
-                except CopyError as e:
-                    st.error(f"카피 생성 실패: {e}")
+                client = _claude()
+                if client is None:
+                    st.warning(
+                        "카피 자동생성은 ANTHROPIC_API_KEY가 필요합니다. "
+                        "키 없이도 아래 칸에 카피를 직접 입력하면 렌더됩니다. "
+                        "(앱 Settings → Secrets에 ANTHROPIC_API_KEY 추가 시 자동생성 활성화)"
+                    )
+                else:
+                    from pipeline.copy import generate_block_copy, CopyError
+                    try:
+                        out = generate_block_copy(
+                            client=client, block_type=blk["type"],
+                            copy_schema=spec.copy_schema, meta=r["meta"],
+                            system_prompt_path=PROMPTS / "showcase-copy.md")
+                        blk["data"].update(out)
+                        st.rerun()
+                    except CopyError as e:
+                        st.error(f"카피 생성 실패: {e}")
             for f in spec.input_fields:
                 cur = blk["data"].get(f.key, "")
                 if f.kind == "textarea":
