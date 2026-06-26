@@ -15,3 +15,6 @@ tests/_fixtures/.cache/
 # 생성된 렌더 결과물 (예시 카피 JSON은 추적, PNG는 제외)
 demo_output/**/*.png
 demo_output/*.png
+
+# 내부 디자인 분석·스펙 (public 레포에 공개 안 함)
+docs/
